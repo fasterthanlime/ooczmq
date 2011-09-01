@@ -12,7 +12,11 @@ main: func {
     pair1 bind("tcp://0.0.0.0:7777")
     pair2 connect("tcp://0.0.0.0:7777")
 
-    pair1 sendString("Hello, World")
-    pair2 recvString() println()
+    for (i in 0..10) {
+        pair1 sendString("Count: %d" format(i))
+        pair2 recvString() println()
+        pair2 sendString("Gotcha!")
+        pair1 recvString() println() 
+    }
 
 }
