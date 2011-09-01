@@ -16,7 +16,8 @@ ZMQ: enum {
 Context: cover from zctx_t* {
 
     new: extern(zctx_new) static func -> This
-    destroy_socket: extern(zsocket_destroy) func (Socket)
+    createSocket: extern(zsocket_new) func (ZMQ) -> Socket
+    destroySocket: extern(zsocket_destroy) func (Socket)
     destroy: extern(zctx_destroy) func@
 
 }
@@ -26,6 +27,9 @@ zstr_recv: extern func (Socket) -> CString
 
 // I would expect zsocket_t but the examples use void*, so here goes.
 Socket: cover from Pointer {
+
+    DYNFROM: extern(ZSOCKET_DYNFROM) static Int
+    DYNTO:   extern(ZSOCKET_DYNTO) static Int
 
     new: extern(zsocket_new) static func (Context, ZMQ) -> This
 

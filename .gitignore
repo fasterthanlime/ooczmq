@@ -1,3 +1,4 @@
 .libs
 *_tmp
 czmq
+.*.swp
