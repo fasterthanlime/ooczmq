@@ -25,7 +25,7 @@ Socket: cover from Pointer {
     bind: extern(zsocket_bind) func (url: CString, ...) -> Int
     connect: extern (zsocket_connect) func (url: CString, ...) -> Int
 
-    str_recv: func -> String {
+    recvString: func -> String {
         zstr_recv(this) toString()
     }
 
@@ -33,7 +33,7 @@ Socket: cover from Pointer {
 
 extend String {
 
-    send: func (s: Socket) {
+    sendTo: func (s: Socket) {
         zstr_send(s, toCString())
     }
 
