@@ -17,7 +17,7 @@ main: func {
     assert (rc == service)
 
     reader connect("tcp://%s:%d", domain, service)
-    "HELLO" sendTo(writer)
+    writer sendString("HELLO")
     message := reader recvString()
     assert (message)
     assert (message == "HELLO")

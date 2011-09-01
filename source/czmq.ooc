@@ -45,12 +45,9 @@ Socket: cover from Pointer {
         zstr_recv(this) toString()
     }
 
-}
-
-extend String {
-
-    sendTo: func (s: Socket) {
-        zstr_send(s, toCString())
+    sendString: func (s: String) {
+        zstr_send(this, s toCString())
     }
 
 }
+
