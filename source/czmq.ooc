@@ -41,13 +41,25 @@ Socket: cover from Pointer {
     bind: extern(zsocket_bind) func (url: CString, ...) -> Int
     connect: extern (zsocket_connect) func (url: CString, ...) -> Int
 
+    recvFrame: extern(zframe_recv) func -> Frame
+
     recvString: func -> String {
-        zstr_recv(this) toString()
+        recv := zstr_recv(this)
+	result := recv toString()
+	free(recv)
+	result
     }
 
     sendString: func (s: String) {
         zstr_send(this, s toCString())
     }
+
+}
+
+Frame: cover from zframe_t* {
+
+    data: extern(zframe_data) func -> Pointer
+    destroy: extern(zframe_destroy) func
 
 }
 

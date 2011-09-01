@@ -8,6 +8,9 @@ main: func {
     sub connect("tcp://localhost:5555") 
 
     while(true) {
+	//frame := sub recvFrame()
+	//"%s" printfln(frame data())
+	//sub destroy()
 	sub recvString() println()
     }
 }
