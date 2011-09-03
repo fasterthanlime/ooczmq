@@ -55,19 +55,15 @@ Socket: cover from Pointer {
 
 }
 
-
 _PollItem: cover from zmq_pollitem_t {
-
-    socket: Socket
+    socket: extern Socket
     fd: extern Int
-    events: extern Short
+    events: extern ZMQ
     revents: extern Short
-
 }
+PollItem: cover from _PollItem* 
 
-PollItem: cover from _PollItem*
-
-//LoopFn: cover from Func(Loop, PollItem, Pointer)
+    //LoopFn: cover from Func(Loop, PollItem, Pointer)
 
 Loop: cover from Pointer {
 
@@ -85,4 +81,5 @@ Loop: cover from Pointer {
 
     setVerbose: extern(zloop_set_verbose) func(Bool) -> Int
 
+    pollerEnd: extern(zloop_poller_end) func(PollItem) -> Int
 }
