@@ -102,6 +102,9 @@ Loop: cover from Pointer {
     //zloop_poller (zloop_t *self, zmq_pollitem_t *item, zloop_fn handler, void *arg);
     poller: extern(zloop_poller) func(PollItem, Pointer, Pointer) -> Int
 
+    //zloop_poller_end (zloop_t *self, zmq_pollitem_t *item);
+    pollerEnd: extern(zloop_poller_end) func(PollItem)
+
     addEvent: func (socket: Socket, events: ZMQ, f: Func (Loop, PollItem)) {
 	pollitem: _PollItem
 	pollitem socket = socket
@@ -111,14 +114,24 @@ Loop: cover from Pointer {
 	poller(pollitem&, loop_thunk, LoopCallback new(f))
     }
 
+    removeEvent: func (socket: Socket) {
+	pollitem: _PollItem
+	pollitem socket = socket
+	pollitem fd = 0
+
+	pollerEnd(pollitem&)
+    }
+
     start: extern(zloop_start) func -> Int
 
     //zloop_timer (zloop_t *self, size_t delay, size_t times, zloop_fn handler, void *arg);
     timer: extern(zloop_timer) func(SizeT, SizeT, Pointer, Pointer) -> Int
 
+    addTimer: func (delay: SizeT, times: SizeT, f: Func (Loop, PollItem)) {
+	timer(delay, times, loop_thunk, LoopCallback new(f))
+    }
+
     destroy: extern(zloop_destroy) func 
 
     setVerbose: extern(zloop_set_verbose) func(Bool) -> Int
-
-    pollerEnd: extern(zloop_poller_end) func(PollItem) -> Int
 }
