@@ -86,12 +86,30 @@ PollItem: cover from _PollItem*
 
     //LoopFn: cover from Func(Loop, PollItem, Pointer)
 
+LoopCallback: class {
+    f: Func (Loop, PollItem)
+    init: func(=f)
+}
+
+loop_thunk: func (l: Loop, item: PollItem, arg: Pointer) {
+    arg as LoopCallback f(l, item)
+}
+
 Loop: cover from Pointer {
 
     new: extern(zloop_new) static func -> This
 
     //zloop_poller (zloop_t *self, zmq_pollitem_t *item, zloop_fn handler, void *arg);
     poller: extern(zloop_poller) func(PollItem, Pointer, Pointer) -> Int
+
+    addEvent: func (socket: Socket, events: ZMQ, f: Func (Loop, PollItem)) {
+	pollitem: _PollItem
+	pollitem socket = socket
+	pollitem fd = 0
+	pollitem events = events
+
+	poller(pollitem&, loop_thunk, Callback new(f))
+    }
 
     start: extern(zloop_start) func -> Int
 
