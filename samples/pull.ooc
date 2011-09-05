@@ -5,12 +5,9 @@ main: func {
     ctx := Context new()
 
     pull := ctx createSocket(ZMQ PULL)
-    pull connect("tcp://localhost:5555") 
+    pull bind("tcp://*:5555") 
 
     while(true) {
-	//pull recvString() println()
-	frame := pull recv()
-	"%s" printfln(size data())
-	data destroy()
+	pull recvString() println()
     }
 }

@@ -1,18 +1,25 @@
 use czmq
 import czmq
 
-import os/Time
+import os/Time, structs/ArrayList
 
-main: func {
+main: func (args: ArrayList<String>) {
+    if(args size < 2) {
+	"Usage: push <name>" println()
+	return 1
+    }
+
+    name := args[1]
+
     ctx := Context new()
 
     push := ctx createSocket(ZMQ PUSH)
-    push bind("tcp://localhost:5555")
+    push connect("tcp://localhost:5555")
 
     i := 0
     while(true) {
-        push sendString("Strike %d" format(i))
+        push sendString("%s:Strike %d" format(name, i))
 	i += 1
-	Time sleepSec(0.000001)
+	Time sleepSec(1)
     }
 }   

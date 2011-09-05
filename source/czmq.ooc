@@ -11,6 +11,10 @@ ZMQ: enum {
     PUB: extern(ZMQ_PUB)
     SUB: extern(ZMQ_SUB)
     PAIR: extern(ZMQ_PAIR)
+
+    POLLIN: extern(ZMQ_POLLIN)
+    POLLOUT: extern(ZMQ_POLLOUT)
+    POLLERR: extern(ZMQ_POLLERR)
 }
 
 Context: cover from zctx_t* {
@@ -63,3 +67,31 @@ Frame: cover from zframe_t* {
 
 }
 
+_PollItem: cover from zmq_pollitem_t {
+    socket: extern Socket
+    fd: extern Int
+    events: extern ZMQ
+    revents: extern Short
+}
+PollItem: cover from _PollItem* 
+
+    //LoopFn: cover from Func(Loop, PollItem, Pointer)
+
+Loop: cover from Pointer {
+
+    new: extern(zloop_new) static func -> This
+
+    //zloop_poller (zloop_t *self, zmq_pollitem_t *item, zloop_fn handler, void *arg);
+    poller: extern(zloop_poller) func(PollItem, Pointer, Pointer) -> Int
+
+    start: extern(zloop_start) func -> Int
+
+    //zloop_timer (zloop_t *self, size_t delay, size_t times, zloop_fn handler, void *arg);
+    timer: extern(zloop_timer) func(SizeT, SizeT, Pointer, Pointer) -> Int
+
+    destroy: extern(zloop_destroy) func 
+
+    setVerbose: extern(zloop_set_verbose) func(Bool) -> Int
+
+    pollerEnd: extern(zloop_poller_end) func(PollItem) -> Int
+}
