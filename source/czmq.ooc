@@ -29,6 +29,7 @@ Context: cover from zctx_t* {
 zstr_send: extern func (Socket, CString)
 zstr_recv: extern func (Socket) -> CString
 
+zsockopt_set_subscribe: extern func (Socket, CString)
 // I would expect zsocket_t but the examples use void*, so here goes.
 Socket: cover from Pointer {
 
@@ -51,6 +52,10 @@ Socket: cover from Pointer {
 
     sendString: func (s: String) {
         zstr_send(this, s toCString())
+    }
+
+    setSubscribe: func(s: String) {
+        zsockopt_set_subscribe(this, s toCString())
     }
 
 }

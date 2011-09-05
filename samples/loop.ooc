@@ -32,9 +32,10 @@ socketEvent: func(a: Loop, b: PollItem, c: Pointer) {
     "Message received: %s" format(b@ socket recvString()) println()
 }
 
-timerEvent: func(a: Loop, b: PollItem, c: Pointer) {
+timerEvent: func(loop: Loop, item: PollItem, arg: Pointer) {
     "timer event!" println()
-    c as Socket sendString("hello")
+    "item addr:%p" format(item) println()
+    arg as Socket sendString("hello")
 }
 
 // program hangs somehow
