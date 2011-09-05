@@ -108,7 +108,7 @@ Loop: cover from Pointer {
 	pollitem fd = 0
 	pollitem events = events
 
-	poller(pollitem&, loop_thunk, Callback new(f))
+	poller(pollitem&, loop_thunk, LoopCallback new(f))
     }
 
     start: extern(zloop_start) func -> Int

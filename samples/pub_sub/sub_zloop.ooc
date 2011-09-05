@@ -1,11 +1,6 @@
 use czmq
 import czmq
 
-myHandler: func(l: Loop, item: PollItem) -> Int {
-    item@ socket recvString() println()
-    0
-}
-
 main: func {
     ctx := Context new()
     sub := ctx createSocket(ZMQ SUB)
@@ -13,7 +8,9 @@ main: func {
     loop := Loop new()
     loop setVerbose(true)
 
-    loop addEvent(sub, ZMQ POLLIN, myHandler)
+    loop addEvent(sub, ZMQ POLLIN, |l, item|
+	sub recvString() println()
+    )
     loop start()
 
 }
