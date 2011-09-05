@@ -1,7 +1,2 @@
-socket-test
-pub
-sub
-rep
-req
-push
-pull
+*
+! *.*

@@ -10,7 +10,6 @@ main: func {
     ctx := Context new()
     sub := ctx createSocket(ZMQ SUB)
     sub connect("tcp://localhost:5555") 
-    sub setSubscribe("")
     loop := Loop new()
     loop setVerbose(true)
     pollInput := [sub, 0, ZMQ POLLIN] as PollItem

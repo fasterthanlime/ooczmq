@@ -15,6 +15,8 @@ ZMQ: enum {
     POLLIN: extern(ZMQ_POLLIN)
     POLLOUT: extern(ZMQ_POLLOUT)
     POLLERR: extern(ZMQ_POLLERR)
+
+    SUBSCRIBE: extern(ZMQ_SUBSCRIBE)
 }
 
 Context: cover from zctx_t* {
@@ -56,6 +58,12 @@ Socket: cover from Pointer {
 
     sendString: func (s: String) {
         zstr_send(this, s toCString())
+    }
+
+    setSockOpt: extern(zmq_setsockopt) func (opt: ZMQ, value: Pointer, option_len: SizeT)
+
+    setSubscribe: func (prefix: String) {
+	setSockOpt(ZMQ SUBSCRIBE, prefix toCString(), prefix length())
     }
 
 }
