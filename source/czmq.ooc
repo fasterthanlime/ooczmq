@@ -15,6 +15,8 @@ ZMQ: enum {
     POLLIN: extern(ZMQ_POLLIN)
     POLLOUT: extern(ZMQ_POLLOUT)
     POLLERR: extern(ZMQ_POLLERR)
+
+    SUBSCRIBE: extern(ZMQ_SUBSCRIBE)
 }
 
 Context: cover from zctx_t* {
@@ -46,17 +48,31 @@ Socket: cover from Pointer {
     bind: extern(zsocket_bind) func (url: CString, ...) -> Int
     connect: extern (zsocket_connect) func (url: CString, ...) -> Int
 
+    recvFrame: extern(zframe_recv) func -> Frame
+
     recvString: func -> String {
-        zstr_recv(this) toString()
+        recv := zstr_recv(this)
+        result := recv toString()
+        free(recv)
+        result
     }
 
     sendString: func (s: String) {
         zstr_send(this, s toCString())
     }
 
-    setSubscribe: func(s: String) {
-        zsockopt_set_subscribe(this, s toCString())
+    setSockOpt: extern(zmq_setsockopt) func (opt: ZMQ, value: Pointer, option_len: SizeT)
+
+    setSubscribe: func (prefix: String) {
+        setSockOpt(ZMQ SUBSCRIBE, prefix toCString(), prefix length())
     }
+
+}
+
+Frame: cover from zframe_t* {
+
+    data: extern(zframe_data) func -> Pointer
+    destroy: extern(zframe_destroy) func
 
 }
 
