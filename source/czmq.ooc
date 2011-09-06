@@ -1,6 +1,9 @@
 use czmq
 include czmq
 
+// DEBUG code
+import structs/ArrayList
+
 ZMQ: enum {
     REQ: extern(ZMQ_REQ)
     REP: extern(ZMQ_REP)
@@ -87,13 +90,16 @@ PollItem: cover from _PollItem*
     //LoopFn: cover from Func(Loop, PollItem, Pointer)
 
 LoopCallback: class {
+    socket: Socket
     f: Func (Loop, PollItem)
-    init: func(=f)
+    init: func(=socket, =f)
 }
 
 loop_thunk: func (l: Loop, item: PollItem, arg: Pointer) {
     arg as LoopCallback f(l, item)
 }
+
+loop_callbacks := ArrayList<LoopCallback> new()
 
 Loop: cover from Pointer {
 
@@ -106,20 +112,28 @@ Loop: cover from Pointer {
     pollerEnd: extern(zloop_poller_end) func(PollItem)
 
     addEvent: func (socket: Socket, events: ZMQ, f: Func (Loop, PollItem)) {
-	pollitem: _PollItem
-	pollitem socket = socket
-	pollitem fd = 0
-	pollitem events = events
+	pollitem := gc_malloc(PollItem size) as PollItem
+	pollitem@ socket = socket
+	pollitem@ fd = 0
+	pollitem@ events = events
 
-	poller(pollitem&, loop_thunk, LoopCallback new(f))
+	callback := LoopCallback new(socket, f)
+	loop_callbacks add(callback)
+
+	poller(pollitem, loop_thunk, callback)
     }
 
     removeEvent: func (socket: Socket) {
-	pollitem: _PollItem
-	pollitem socket = socket
-	pollitem fd = 0
+	pollitem := gc_malloc(PollItem size) as PollItem
+	pollitem@ socket = socket
+	pollitem@ fd = 0
 
-	pollerEnd(pollitem&)
+	iterator := loop_callbacks iterator()
+	while(iterator hasNext?()) {
+	    if (iterator next() socket == socket) iterator remove()
+	}
+
+	pollerEnd(pollitem)
     }
 
     start: extern(zloop_start) func -> Int
@@ -128,7 +142,7 @@ Loop: cover from Pointer {
     timer: extern(zloop_timer) func(SizeT, SizeT, Pointer, Pointer) -> Int
 
     addTimer: func (delay: SizeT, times: SizeT, f: Func (Loop, PollItem)) {
-	timer(delay, times, loop_thunk, LoopCallback new(f))
+	timer(delay, times, loop_thunk, LoopCallback new(null, f))
     }
 
     destroy: extern(zloop_destroy) func 
