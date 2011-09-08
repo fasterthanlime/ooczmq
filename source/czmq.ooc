@@ -228,8 +228,13 @@ _PollItem: cover from zmq_pollitem_t {
 PollItem: cover from _PollItem* 
 
 LoopCallback: class {
+    socket: Socket = null
+    fd: Int = 0
+
     f: Func (Loop, PollItem)
-    init: func(=f)
+    init: func ~sock (=f, =socket)
+    init: func ~fd (=f, =fd)
+    init: func ~nothing (=f)
 }
 
 loop_thunk: func (l: Loop, item: PollItem, arg: Pointer) {
@@ -265,28 +270,41 @@ Loop: cover from Pointer {
      * If you register the pollitem more than once, each instance will invoke its
      * corresponding handler.
      */
-    addEvent: func (socket: Socket, events: ZMQ, f: Func (Loop, PollItem)) -> Int {
+    addEvent: func ~socket (socket: Socket, events: ZMQ, f: Func (Loop, PollItem)) -> LoopCallback {
 	pollitem := gc_malloc(PollItem size) as PollItem
 	pollitem@ socket = socket
 	pollitem@ fd = 0
 	pollitem@ events = events
 
-	callback := LoopCallback new(f)
+	callback := LoopCallback new(f, socket)
 	loop_callbacks add(callback)
 
 	poller(pollitem, loop_thunk, callback)
+
+        callback
     }
 
-    addFdEvent: func (fd: Int, events: ZMQ, f: Func (Loop, PollItem)) -> Int {
+    addEvent: func ~fileDescriptor (fd: Int, events: ZMQ, f: Func (Loop, PollItem)) -> LoopCallback {
 	pollitem := gc_malloc(PollItem size) as PollItem
 	pollitem@ socket = null
 	pollitem@ fd = fd
 	pollitem@ events = events
 
-	callback := LoopCallback new(f)
+	callback := LoopCallback new(f, fd)
 	loop_callbacks add(callback)
 
 	poller(pollitem, loop_thunk, callback)
+
+        callback
+    }
+
+    removeEvent: func (callback: LoopCallback) {
+        pollitem := gc_malloc(PollItem size) as PollItem
+        pollitem@ socket = callback socket
+        pollitem@ fd = callback fd
+
+        pollerEnd(pollitem)
+        loop_callbacks remove(callback)
     }
 
     // TODO: removeEvent
@@ -296,8 +314,21 @@ Loop: cover from Pointer {
     //zloop_timer (zloop_t *self, size_t delay, size_t times, zloop_fn handler, void *arg);
     timer: extern(zloop_timer) func(SizeT, SizeT, Pointer, Pointer) -> Int
 
-    addTimer: func (delay: SizeT, times: SizeT, f: Func (Loop, PollItem)) {
-	timer(delay, times, loop_thunk, LoopCallback new(f))
+    //zloop_timer_end (zloop_t *self, void *arg);
+    timerEnd: extern(zloop_timer_end) func (Pointer)
+
+    addTimer: func (delay: SizeT, times: SizeT, f: Func (Loop, PollItem)) -> LoopCallback {
+        callback := LoopCallback new(f)
+        loop_callbacks add(callback)
+
+	timer(delay, times, loop_thunk, callback)
+
+        callback
+    }
+
+    removeTimer: func (callback: LoopCallback) {
+        timerEnd(callback)
+        loop_callbacks remove(callback)
     }
 
     /**
