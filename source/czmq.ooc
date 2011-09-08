@@ -34,6 +34,8 @@ Context: cover from zctx_t* {
 zstr_send: extern func (Socket, CString)
 zstr_recv: extern func (Socket) -> CString
 
+zframe_send: extern func (Frame*, Socket, Int)
+
 zsockopt_set_subscribe: extern func (Socket, CString)
 // I would expect zsocket_t but the examples use void*, so here goes.
 Socket: cover from Pointer {
@@ -64,6 +66,10 @@ Socket: cover from Pointer {
         zstr_send(this, s toCString())
     }
 
+    sendFrame: func (frame: Frame, flags: Int = 0) {
+	zframe_send(frame&, this, flags)
+    }
+
     setSockOpt: extern(zmq_setsockopt) func (opt: ZMQ, value: Pointer, option_len: SizeT)
 
     setSubscribe: func (prefix: String) {
@@ -74,8 +80,10 @@ Socket: cover from Pointer {
 
 Frame: cover from zframe_t* {
 
+    new: extern(zframe_new) static func (data: Pointer, size: SizeT) -> This
     data: extern(zframe_data) func -> Pointer
-    destroy: extern(zframe_destroy) func
+    size: extern(zframe_size) func -> SizeT
+    destroy: extern(zframe_destroy) func@
 
 }
 
@@ -85,9 +93,8 @@ _PollItem: cover from zmq_pollitem_t {
     events: extern ZMQ
     revents: extern Short
 }
-PollItem: cover from _PollItem* 
 
-    //LoopFn: cover from Func(Loop, PollItem, Pointer)
+PollItem: cover from _PollItem* 
 
 LoopCallback: class {
     socket: Socket
