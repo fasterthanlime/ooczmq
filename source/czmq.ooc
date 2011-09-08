@@ -33,28 +33,65 @@ Context: cover from zctx_t* {
 
 zstr_send: extern func (Socket, CString)
 zstr_recv: extern func (Socket) -> CString
-
+zstr_recv_nowait: extern func (Socket) -> CString
 zframe_send: extern func (Frame*, Socket, Int)
-
 zsockopt_set_subscribe: extern func (Socket, CString)
-// I would expect zsocket_t but the examples use void*, so here goes.
+
+/**
+ * zsocket - working with ØMQ sockets
+ */
 Socket: cover from Pointer {
 
+    //  This port range is defined by IANA for dynamic or private ports
+    //  We use this when choosing a port for dynamic binding.
     DYNFROM: extern(ZSOCKET_DYNFROM) static Int
     DYNTO:   extern(ZSOCKET_DYNTO) static Int
 
+    /**
+     * Create a new socket within our czmq context, replaces zmq_socket.
+     * If the socket is a SUB socket, automatically subscribes to everything.
+     * Use this to get automatic management of the socket at shutdown.
+     */
     new: extern(zsocket_new) static func (Context, ZMQ) -> This
 
     getType: extern(zsocket_type_str) func -> CString
+    /** Returns socket type as printable constant string */
     type: String {
         get { getType() toString() }
     }
 
+    /**
+     * Bind a socket to a formatted endpoint. If the port is specified as
+     * '*', binds to any free port from ZSOCKET_DYNFROM to ZSOCKET_DYNTO
+     * and returns the actual port number used. Otherwise asserts that the
+     * bind succeeded with the specified port number. Always returns the
+     * port number if successful.
+     */
     bind: extern(zsocket_bind) func (url: CString, ...) -> Int
+
+    /**
+     * Connect a socket to a formatted endpoint
+     * Checks with assertion that the connect was valid
+     */
     connect: extern (zsocket_connect) func (url: CString, ...) -> Int
 
+    /**
+     * Receive frame from socket, returns zframe_t object or NULL if the recv
+     * was interrupted. Does a blocking recv, if you want to not block then use
+     * recvFrameNoWait().
+     */
     recvFrame: extern(zframe_recv) func -> Frame
 
+    /**
+     * Receive a new frame off the socket. Returns newly allocated frame, or
+     * NULL if there was no input waiting, or if the read was interrupted.
+     */
+    recvFrameNoWait: extern(zframe_recv_nowait) func -> Frame
+
+    /**
+     * Receive a string off a socket - string is garbage collected when not
+     * used anymore.
+     */
     recvString: func -> String {
         recv := zstr_recv(this)
         result := recv toString()
@@ -62,27 +99,66 @@ Socket: cover from Pointer {
         result
     }
 
+    /**
+     * Receive a string off a socket if socket had input waiting
+     */
+    recvStringNoWait: func -> String {
+        recv := zstr_recv_nowait(this)
+	if(!recv) return null
+
+        result := recv toString()
+        free(recv)
+        result
+    }
+
+    /**
+     * Send a string to a socket in ØMQ string format
+     */
     sendString: func (s: String) {
         zstr_send(this, s toCString())
     }
 
+    /**
+     * Send a frame to a socket, destroys frame after sending unless
+     * you use ZFRAME REUSE flag
+     */
     sendFrame: func (frame: Frame, flags: Int = 0) {
 	zframe_send(frame&, this, flags)
     }
 
-    setSockOpt: extern(zmq_setsockopt) func (opt: ZMQ, value: Pointer, option_len: SizeT)
-
-    setSubscribe: func (prefix: String) {
-        setSockOpt(ZMQ SUBSCRIBE, prefix toCString(), prefix length())
-    }
-
 }
 
+/**
+ * The zframe class provides methods to send and receive single message frames across ØMQ sockets.
+ * 
+ * A frame corresponds to one zmq_msg_t. When you read a frame from a socket, the zframe_more()
+ * method indicates if the frame is part of an unfinished multipart message. The zframe_send method
+ * normally destroys the frame, but with the ZFRAME_REUSE flag, you can send the same frame many
+ * times. Frames are binary, and this class has no special support for text data.
+ */
 Frame: cover from zframe_t* {
 
+    MORE : extern(ZFRAME_MORE ) Int
+    REUSE: extern(ZFRAME_REUSE) Int
+
+    /**
+     * Create a new frame with optional size, and optional data
+     */
     new: extern(zframe_new) static func (data: Pointer, size: SizeT) -> This
+
+    /**
+     * Return address of frame data
+     */
     data: extern(zframe_data) func -> Pointer
+
+    /**
+     * Return number of bytes in frame data
+     */
     size: extern(zframe_size) func -> SizeT
+
+    /**
+     * Destroy a frame
+     */
     destroy: extern(zframe_destroy) func@
 
 }
@@ -108,8 +184,17 @@ loop_thunk: func (l: Loop, item: PollItem, arg: Pointer) {
 
 loop_callbacks := ArrayList<LoopCallback> new()
 
+/**
+ * The zloop class provides an event-driven reactor pattern. The reactor handles
+ * zmq_pollitem_t items (pollers or writers, sockets or fds), and once-off or
+ * repeated timers. Its resolution is 1 msec. It uses a tickless timer to reduce
+ * CPU interrupts in inactive processes.
+ */
 Loop: cover from Pointer {
 
+    /**
+     * Create a new zloop reactor
+     */
     new: extern(zloop_new) static func -> This
 
     //zloop_poller (zloop_t *self, zmq_pollitem_t *item, zloop_fn handler, void *arg);
@@ -118,7 +203,15 @@ Loop: cover from Pointer {
     //zloop_poller_end (zloop_t *self, zmq_pollitem_t *item);
     pollerEnd: extern(zloop_poller_end) func(PollItem)
 
-    addEvent: func (socket: Socket, events: ZMQ, f: Func (Loop, PollItem)) {
+    /**
+     * Register pollitem with the reactor. When the pollitem is ready, will call
+     * the handler, passing the arg.
+     * 
+     * Returns 0 if OK, -1 if there was an error.
+     * If you register the pollitem more than once, each instance will invoke its
+     * corresponding handler.
+     */
+    addEvent: func (socket: Socket, events: ZMQ, f: Func (Loop, PollItem)) -> Int {
 	pollitem := gc_malloc(PollItem size) as PollItem
 	pollitem@ socket = socket
 	pollitem@ fd = 0
@@ -130,6 +223,9 @@ Loop: cover from Pointer {
 	poller(pollitem, loop_thunk, callback)
     }
 
+    /**
+     * Cancel a pollitem from the reactor, specified by socket
+     */
     removeEvent: func (socket: Socket) {
 	pollitem := gc_malloc(PollItem size) as PollItem
 	pollitem@ socket = socket
@@ -152,7 +248,14 @@ Loop: cover from Pointer {
 	timer(delay, times, loop_thunk, LoopCallback new(null, f))
     }
 
+    /**
+     * Destroy a reactor
+     */
     destroy: extern(zloop_destroy) func 
 
+    /**
+     * Set verbose tracing of reactor on/off
+     */
     setVerbose: extern(zloop_set_verbose) func(Bool) -> Int
 }
+
