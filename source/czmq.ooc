@@ -35,6 +35,7 @@ zstr_send: extern func (Socket, CString)
 zstr_recv: extern func (Socket) -> CString
 zstr_recv_nowait: extern func (Socket) -> CString
 zframe_send: extern func (Frame*, Socket, Int)
+zmsg_send: extern func (Message*, Socket)
 zsockopt_set_subscribe: extern func (Socket, CString)
 
 /**
@@ -76,6 +77,11 @@ Socket: cover from Pointer {
     connect: extern (zsocket_connect) func (url: CString, ...) -> Int
 
     /**
+     * Read 1 or more frames off the socket, into a new message object
+     */
+    recvMessage: extern(zmsg_recv) func -> Message
+
+    /**
      * Receive frame from socket, returns zframe_t object or NULL if the recv
      * was interrupted. Does a blocking recv, if you want to not block then use
      * recvFrameNoWait().
@@ -112,10 +118,10 @@ Socket: cover from Pointer {
     }
 
     /**
-     * Send a string to a socket in ØMQ string format
+     * Send a message to the socket, and then destroy it
      */
-    sendString: func (s: String) {
-        zstr_send(this, s toCString())
+    sendMessage: func (message: Message) {
+        zmsg_send(message&, this)
     }
 
     /**
@@ -124,6 +130,13 @@ Socket: cover from Pointer {
      */
     sendFrame: func (frame: Frame, flags: Int = 0) {
 	zframe_send(frame&, this, flags)
+    }
+
+    /**
+     * Send a string to a socket in ØMQ string format
+     */
+    sendString: func (s: String) {
+        zstr_send(this, s toCString())
     }
 
 }
@@ -160,6 +173,43 @@ Frame: cover from zframe_t* {
      * Destroy a frame
      */
     destroy: extern(zframe_destroy) func@
+
+}
+
+zmsg_pushstr: extern func (Message, CString)
+zmsg_addstr : extern func (Message, CString)
+zmsg_popstr : extern func (Message) -> CString
+
+/**
+ * The zmsg class provides methods to send and receive multipart messages across ØMQ sockets.
+ * 
+ * This class provides a list-like container interface, with methods to work with the overall
+ * container. zmsg_t messages are composed of zero or more zframe_t frames.
+ */
+Message: cover from zmsg_t* {
+
+    new: extern(zmsg_new) static func -> This 
+
+    push: extern(zmsg_push) func (Frame)
+    add : extern(zmsg_add)  func (Frame)
+    pop:  extern(zmsg_pop) func -> Frame
+
+    pushmem: extern(zmsg_pushmem) func (Pointer, SizeT)
+    addmem : extern(zmsg_addmem)  func (Pointer, SizeT)
+
+    pushstr: func (s: String) {
+        zmsg_pushstr(this, s toCString())
+    }
+
+    addstr : func (s: String) {
+        zmsg_addstr(this, s toCString())
+    }
+
+    popstr : func -> String {
+        zmsg_popstr(this) toString()
+    }
+
+    destroy: extern(zmsg_destroy) func@
 
 }
 
