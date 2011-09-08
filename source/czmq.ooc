@@ -174,6 +174,11 @@ Frame: cover from zframe_t* {
      */
     destroy: extern(zframe_destroy) func@
 
+    /*
+     * Create a new frame that duplicates an existing frame
+     */
+    dup: extern(zframe_dup) func -> Frame
+
 }
 
 zmsg_pushstr: extern func (Message, CString)
@@ -223,9 +228,8 @@ _PollItem: cover from zmq_pollitem_t {
 PollItem: cover from _PollItem* 
 
 LoopCallback: class {
-    socket: Socket
     f: Func (Loop, PollItem)
-    init: func(=socket, =f)
+    init: func(=f)
 }
 
 loop_thunk: func (l: Loop, item: PollItem, arg: Pointer) {
@@ -267,27 +271,25 @@ Loop: cover from Pointer {
 	pollitem@ fd = 0
 	pollitem@ events = events
 
-	callback := LoopCallback new(socket, f)
+	callback := LoopCallback new(f)
 	loop_callbacks add(callback)
 
 	poller(pollitem, loop_thunk, callback)
     }
 
-    /**
-     * Cancel a pollitem from the reactor, specified by socket
-     */
-    removeEvent: func (socket: Socket) {
+    addFdEvent: func (fd: Int, events: ZMQ, f: Func (Loop, PollItem)) -> Int {
 	pollitem := gc_malloc(PollItem size) as PollItem
-	pollitem@ socket = socket
-	pollitem@ fd = 0
+	pollitem@ socket = null
+	pollitem@ fd = fd
+	pollitem@ events = events
 
-	iterator := loop_callbacks iterator()
-	while(iterator hasNext?()) {
-	    if (iterator next() socket == socket) iterator remove()
-	}
+	callback := LoopCallback new(f)
+	loop_callbacks add(callback)
 
-	pollerEnd(pollitem)
+	poller(pollitem, loop_thunk, callback)
     }
+
+    // TODO: removeEvent
 
     start: extern(zloop_start) func -> Int
 
@@ -295,7 +297,7 @@ Loop: cover from Pointer {
     timer: extern(zloop_timer) func(SizeT, SizeT, Pointer, Pointer) -> Int
 
     addTimer: func (delay: SizeT, times: SizeT, f: Func (Loop, PollItem)) {
-	timer(delay, times, loop_thunk, LoopCallback new(null, f))
+	timer(delay, times, loop_thunk, LoopCallback new(f))
     }
 
     /**
