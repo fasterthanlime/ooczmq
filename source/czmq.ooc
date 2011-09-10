@@ -270,7 +270,7 @@ Loop: cover from Pointer {
      * corresponding handler.
      */
     addEvent: func ~socket (socket: Socket, events: ZMQ, f: Func (Loop, PollItem)) -> LoopCallback {
-	pollitem := gc_malloc(PollItem size) as PollItem
+	pollitem := gc_malloc(_PollItem size) as PollItem
 	pollitem@ socket = socket
 	pollitem@ fd = 0
 	pollitem@ events = events
@@ -284,7 +284,7 @@ Loop: cover from Pointer {
     }
 
     addEvent: func ~fileDescriptor (fd: Int, events: ZMQ, f: Func (Loop, PollItem)) -> LoopCallback {
-	pollitem := gc_malloc(PollItem size) as PollItem
+	pollitem := gc_malloc(_PollItem size) as PollItem
 	pollitem@ socket = null
 	pollitem@ fd = fd
 	pollitem@ events = events
@@ -298,7 +298,7 @@ Loop: cover from Pointer {
     }
 
     removeEvent: func (callback: LoopCallback) {
-        pollitem := gc_malloc(PollItem size) as PollItem
+        pollitem := gc_malloc(_PollItem size) as PollItem
         pollitem@ socket = callback socket
         pollitem@ fd = callback fd
 
