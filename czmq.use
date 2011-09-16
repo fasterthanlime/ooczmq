@@ -2,3 +2,4 @@ Name: czmw
 Description: High-level wrapper over zeromq
 SourcePath: source
 Libs: -lzmq,-lczmq
+Includes: czmq.h
