@@ -184,6 +184,7 @@ Frame: cover from zframe_t* {
 zmsg_pushstr: extern func (Message, CString)
 zmsg_addstr : extern func (Message, CString)
 zmsg_popstr : extern func (Message) -> CString
+zmsg_size : extern func (Message) -> SizeT
 
 /**
  * The zmsg class provides methods to send and receive multipart messages across ØMQ sockets.
@@ -216,6 +217,9 @@ Message: cover from zmsg_t* {
 
     destroy: extern(zmsg_destroy) func@
 
+    size: func -> SizeT {
+        zmsg_size(this)
+    }
 }
 
 _PollItem: cover from zmq_pollitem_t {
