@@ -216,9 +216,7 @@ Message: cover from zmsg_t* {
 
     destroy: extern(zmsg_destroy) func@
 
-    size: func -> SizeT {
-        zmsg_size(this)
-    }
+    size: extern(zmsg_size) func -> SizeT
 }
 
 _PollItem: cover from zmq_pollitem_t {
