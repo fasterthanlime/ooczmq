@@ -36,6 +36,8 @@ zstr_recv_nowait: extern func (Socket) -> CString
 zframe_send: extern func (Frame*, Socket, Int)
 zmsg_send: extern func (Message*, Socket)
 zsockopt_set_subscribe: extern func (Socket, CString)
+zsockopt_set_unsubscribe: extern func (Socket, CString)
+zsockopt_set_linger: extern func (Socket, Int)
 
 /**
  * zsocket - working with ØMQ sockets
@@ -136,6 +138,27 @@ Socket: cover from Pointer {
      */
     sendString: func (s: String) {
         zstr_send(this, s toCString())
+    }
+
+    /**
+     * Set linger.
+     */
+    setLinger: func (linger: Int) {
+        zsockopt_set_linger(this, linger)
+    }
+
+    /**
+     * Set subscribe
+     */
+    subscribe: func (subscribe: String) {
+        zsockopt_set_subscribe(this, subscribe toCString())
+    }
+
+    /**
+     * Set unsubscribe
+     */
+    unsubscribe: func (unsubscribe: String) {
+        zsockopt_set_unsubscribe(this, unsubscribe toCString())
     }
 
 }
