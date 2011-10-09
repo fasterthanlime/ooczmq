@@ -30,6 +30,8 @@ Context: cover from zctx_t* {
 
 }
 
+zmq_version: extern func (Int*, Int*, Int*)
+
 zstr_send: extern func (Socket, CString)
 zstr_recv: extern func (Socket) -> CString
 zstr_recv_nowait: extern func (Socket) -> CString
