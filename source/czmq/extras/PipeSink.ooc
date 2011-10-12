@@ -16,34 +16,44 @@ PipeSink: class {
     fd: FileDescriptor
     pullSocket: Socket
     outputCallback: LoopCallback
-    inputCallback: LoopCallback
+    inputCallback: LoopCallback = null
+    timeoutCallback: LoopCallback = null
+    // How often to check for inactivity
+    timeout: SizeT = 250
 
     init: func ~pipe (=loop, =pullSocket, =pipe) {
         fd = pipe writeFD
-        reset()
+        start()
     }
     init: func ~fileDescriptor (=loop, =pullSocket, =fd) {
-        reset()
+        start()
     }
 
-    reset: func () {
-        inputCallback = null
+    start: func () {
         outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item| processEvents())
+        timeoutCallback = loop addTimer(timeout, 0, |loop, item| checkInactivity())
     }
 
     processEvents: func () {
         if(!inputCallback) {
+            removeOutputCB()
             inputCallback = loop addEvent(fd, ZMQ POLLOUT, |loop, item| pump())
         }
     }
 
-    pump: func () {
+    pump: func () -> Bool {
         frame := pullSocket recvFrameNoWait()
         if(frame) {
             feed(frame data(), frame size())
-        } else {
-            loop removeEvent(inputCallback)
-            inputCallback = null
+            return true
+        }
+        false
+    }
+
+    checkInactivity: func () {
+        if(!outputCallback && !pump()) {
+            removeInputCB()
+            outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item| processEvents())
         }
     }
 
@@ -57,11 +67,25 @@ PipeSink: class {
         }
     }
 
-    destroy: func () {
-        loop removeEvent(outputCallback)
+    removeOutputCB: func () {
+        if(outputCallback) {
+            loop removeEvent(outputCallback)
+            outputCallback = null
+        }
+    }
+
+    removeInputCB: func () {
         if(inputCallback) {
             loop removeEvent(inputCallback)
+            inputCallback = null
         }
+    }
+
+    destroy: func () {
+        removeOutputCB()
+        removeInputCB()
+        loop removeTimer(timeoutCallback)
+        timeoutCallback = null
         // FIXME: There's probably something else to do here as well, ideas?
     }
 }
