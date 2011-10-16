@@ -1,7 +1,7 @@
 use czmq
 import czmq
 
-import os/[Pipe,FileDescriptor], os/native/PipeUnix
+import os/[Pipe,FileDescriptor,Time], os/native/PipeUnix
 
 /**
  * The PipeSink class provides an interface for listening to a socket
@@ -19,7 +19,10 @@ PipeSink: class {
     inputCallback: LoopCallback = null
     timeoutCallback: LoopCallback = null
     // How often to check for inactivity
-    timeout: SizeT = 250
+    timeoutInterval: SizeT = 250
+    // Time in milliseconds after which to switch the status of the PipeSink as idle
+    timeout: UInt = 250
+    prevActivity: UInt
 
     init: func ~pipe (=loop, =pullSocket, =pipe) {
         fd = pipe writeFD
@@ -30,8 +33,9 @@ PipeSink: class {
     }
 
     start: func () {
+        prevActivity = Time runTime as UInt
         outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item| processEvents())
-        timeoutCallback = loop addTimer(timeout, 0, |loop, item| checkInactivity())
+        timeoutCallback = loop addTimer(timeoutInterval, 0, |loop, item| checkInactivity())
     }
 
     processEvents: func () {
@@ -45,13 +49,14 @@ PipeSink: class {
         frame := pullSocket recvFrameNoWait()
         if(frame) {
             feed(frame data(), frame size())
+            prevActivity = Time runTime as UInt
             return true
         }
         false
     }
 
     checkInactivity: func () {
-        if(!outputCallback && !pump()) {
+        if(!outputCallback && Time runTime as UInt - prevActivity >= timeout) {
             removeInputCB()
             outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item| processEvents())
         }
