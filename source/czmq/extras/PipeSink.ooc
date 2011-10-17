@@ -45,14 +45,12 @@ PipeSink: class {
         }
     }
 
-    pump: func () -> Bool {
+    pump: func () {
         frame := pullSocket recvFrameNoWait()
         if(frame) {
             feed(frame data(), frame size())
             prevActivity = Time runTime as UInt
-            return true
         }
-        false
     }
 
     checkInactivity: func () {
