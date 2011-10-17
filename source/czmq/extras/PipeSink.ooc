@@ -17,12 +17,9 @@ PipeSink: class {
     pullSocket: Socket
     outputCallback: LoopCallback
     inputCallback: LoopCallback = null
-    timeoutCallback: LoopCallback = null
-    // How often to check for inactivity
-    timeoutInterval: SizeT = 250
-    // Time in milliseconds after which to switch the status of the PipeSink as idle
-    timeout: UInt = 250
-    prevActivity: UInt
+    // How many inactive pumps to tolerate
+    inactivityTolerance:= 10
+    inactivityCounter:= 0
 
     init: func ~pipe (=loop, =pullSocket, =pipe) {
         fd = pipe writeFD
@@ -33,9 +30,7 @@ PipeSink: class {
     }
 
     start: func () {
-        prevActivity = Time runTime as UInt
         outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item| processEvents())
-        timeoutCallback = loop addTimer(timeoutInterval, 0, |loop, item| checkInactivity())
     }
 
     processEvents: func () {
@@ -49,12 +44,16 @@ PipeSink: class {
         frame := pullSocket recvFrameNoWait()
         if(frame) {
             feed(frame data(), frame size())
-            prevActivity = Time runTime as UInt
+            inactivityCounter = 0
+        } else {
+            inactivityCounter += 1
+            checkInactivity()
         }
     }
 
     checkInactivity: func () {
-        if(!outputCallback && Time runTime as UInt - prevActivity >= timeout) {
+        if(inactivityCounter >= inactivityTolerance) {
+            inactivityCounter = 0
             removeInputCB()
             outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item| processEvents())
         }
@@ -87,8 +86,6 @@ PipeSink: class {
     destroy: func () {
         removeOutputCB()
         removeInputCB()
-        loop removeTimer(timeoutCallback)
-        timeoutCallback = null
         // FIXME: There's probably something else to do here as well, ideas?
     }
 }
