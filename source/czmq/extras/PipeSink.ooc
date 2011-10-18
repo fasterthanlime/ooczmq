@@ -1,7 +1,7 @@
 use czmq
 import czmq
 
-import os/[Pipe,FileDescriptor], os/native/PipeUnix
+import os/[Pipe,FileDescriptor,Time], os/native/PipeUnix
 
 /**
  * The PipeSink class provides an interface for listening to a socket
@@ -17,9 +17,9 @@ PipeSink: class {
     pullSocket: Socket
     outputCallback: LoopCallback
     inputCallback: LoopCallback = null
-    timeoutCallback: LoopCallback = null
-    // How often to check for inactivity
-    timeout: SizeT = 250
+    // How many inactive pumps to tolerate
+    inactivityTolerance:= 10
+    inactivityCounter:= 0
 
     init: func ~pipe (=loop, =pullSocket, =pipe) {
         fd = pipe writeFD
@@ -31,7 +31,6 @@ PipeSink: class {
 
     start: func () {
         outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item| processEvents())
-        timeoutCallback = loop addTimer(timeout, 0, |loop, item| checkInactivity())
     }
 
     processEvents: func () {
@@ -41,17 +40,20 @@ PipeSink: class {
         }
     }
 
-    pump: func () -> Bool {
+    pump: func () {
         frame := pullSocket recvFrameNoWait()
         if(frame) {
             feed(frame data(), frame size())
-            return true
+            inactivityCounter = 0
+        } else {
+            inactivityCounter += 1
+            checkInactivity()
         }
-        false
     }
 
     checkInactivity: func () {
-        if(!outputCallback && !pump()) {
+        if(inactivityCounter >= inactivityTolerance) {
+            inactivityCounter = 0
             removeInputCB()
             outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item| processEvents())
         }
@@ -84,8 +86,6 @@ PipeSink: class {
     destroy: func () {
         removeOutputCB()
         removeInputCB()
-        loop removeTimer(timeoutCallback)
-        timeoutCallback = null
         // FIXME: There's probably something else to do here as well, ideas?
     }
 }
