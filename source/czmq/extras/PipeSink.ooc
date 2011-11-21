@@ -30,13 +30,13 @@ PipeSink: class {
     }
 
     start: func () {
-        outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item| processEvents())
+        outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item, event| processEvents())
     }
 
     processEvents: func () {
         if(!inputCallback) {
             removeOutputCB()
-            inputCallback = loop addEvent(fd, ZMQ POLLOUT, |loop, item| pump())
+            inputCallback = loop addEvent(fd, ZMQ POLLOUT, |loop, item, event| pump())
         }
     }
 
@@ -55,7 +55,7 @@ PipeSink: class {
         if(inactivityCounter >= inactivityTolerance) {
             inactivityCounter = 0
             removeInputCB()
-            outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item| processEvents())
+            outputCallback = loop addEvent(pullSocket, ZMQ POLLIN, |loop, item, event| processEvents())
         }
     }
 

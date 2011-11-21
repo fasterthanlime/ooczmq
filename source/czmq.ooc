@@ -257,14 +257,14 @@ LoopCallback: class {
     socket: Socket = null
     fd: Int = 0
 
-    f: Func (Loop, PollItem)
+    f: Func (Loop, PollItem, LoopCallback)
     init: func ~sock (=f, =socket)
     init: func ~fd (=f, =fd)
     init: func ~nothing (=f)
 }
 
 loop_thunk: func (l: Loop, item: PollItem, arg: Pointer) {
-    arg as LoopCallback f(l, item)
+    arg as LoopCallback f(l, item, arg)
 }
 
 loop_callbacks := ArrayList<LoopCallback> new()
@@ -296,7 +296,7 @@ Loop: cover from Pointer {
      * If you register the pollitem more than once, each instance will invoke its
      * corresponding handler.
      */
-    addEvent: func ~socket (socket: Socket, events: ZMQ, f: Func (Loop, PollItem)) -> LoopCallback {
+    addEvent: func ~socket (socket: Socket, events: ZMQ, f: Func (Loop, PollItem, LoopCallback)) -> LoopCallback {
 	pollitem := gc_malloc(_PollItem size) as PollItem
 	pollitem@ socket = socket
 	pollitem@ fd = 0
@@ -310,7 +310,7 @@ Loop: cover from Pointer {
         callback
     }
 
-    addEvent: func ~fileDescriptor (fd: Int, events: ZMQ, f: Func (Loop, PollItem)) -> LoopCallback {
+    addEvent: func ~fileDescriptor (fd: Int, events: ZMQ, f: Func (Loop, PollItem, LoopCallback)) -> LoopCallback {
 	pollitem := gc_malloc(_PollItem size) as PollItem
 	pollitem@ socket = null
 	pollitem@ fd = fd
@@ -343,7 +343,7 @@ Loop: cover from Pointer {
     //zloop_timer_end (zloop_t *self, void *arg);
     timerEnd: extern(zloop_timer_end) func (Pointer)
 
-    addTimer: func (delay: SizeT, times: SizeT, f: Func (Loop, PollItem)) -> LoopCallback {
+    addTimer: func (delay: SizeT, times: SizeT, f: Func (Loop, PollItem, LoopCallback)) -> LoopCallback {
         callback := LoopCallback new(f)
         loop_callbacks add(callback)
 
