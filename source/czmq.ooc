@@ -236,7 +236,10 @@ Message: cover from zmsg_t* {
     }
 
     popstr : func -> String {
-        zmsg_popstr(this) toString()
+        cstr := zmsg_popstr(this)
+        str := cstr toString()
+        free(cstr)
+        str
     }
 
     destroy: extern(zmsg_destroy) func@
