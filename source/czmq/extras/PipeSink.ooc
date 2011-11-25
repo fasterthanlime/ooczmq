@@ -44,6 +44,7 @@ PipeSink: class {
         frame := pullSocket recvFrameNoWait()
         if(frame) {
             feed(frame data(), frame size())
+            frame destroy()
             inactivityCounter = 0
         } else {
             inactivityCounter += 1
