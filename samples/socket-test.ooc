@@ -11,8 +11,8 @@ main: func {
 
     writer := ctx createSocket(ZMQ PUSH)
     reader := ctx createSocket(ZMQ PULL)
-    assert (writer type == "PUSH")
-    assert (reader type == "PULL")
+    //assert (writer type == "PUSH")
+    //assert (reader type == "PULL")
     rc := writer bind("tcp://%s:%d", interf, service)
     assert (rc == service)
 
