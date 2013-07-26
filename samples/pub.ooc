@@ -13,6 +13,6 @@ main: func {
     while(true) {
         pub sendString("Strike %d" format(i))
 	i += 1
-	Time sleepSec(0.000001)
+	Time sleepSec(1)
     }
 }   
