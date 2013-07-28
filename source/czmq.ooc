@@ -40,6 +40,7 @@ zmsg_send: extern func (Message*, Socket)
 zsockopt_set_subscribe: extern func (Socket, CString)
 zsockopt_set_unsubscribe: extern func (Socket, CString)
 zsockopt_set_linger: extern func (Socket, Int)
+zsocket_poll: extern func (Socket, Int) -> Bool
 
 /**
  * zsocket - working with ØMQ sockets
@@ -161,6 +162,10 @@ Socket: cover from Pointer {
      */
     unsubscribe: func (unsubscribe: String) {
         zsockopt_set_unsubscribe(this, unsubscribe toCString())
+    }
+
+    poll: func (msecs: Int) -> Bool {
+        zsocket_poll(this, msecs)
     }
 
 }
